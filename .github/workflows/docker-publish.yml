@@ -1,12 +1,8 @@
 name: Build and publish Docker image
 
 on:
-  push:
-    branches:
-      - main
-    tags:
-      - "v*"
-  # Allow manual runs from the Actions tab (useful for testing a dry run)
+  release:
+    types: [published]
   workflow_dispatch:
 
 env:
@@ -40,20 +36,17 @@ jobs:
           # GITHUB_TOKEN is automatically available — no manual secret needed
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # Derives image tags and OCI labels from Git metadata:
-      #   push to main            → ghcr.io/<owner>/<repo>:main
       #   push tag v1.2.3         → ghcr.io/<owner>/<repo>:1.2.3
       #                             ghcr.io/<owner>/<repo>:1.2
       #                             ghcr.io/<owner>/<repo>:1
       #                             ghcr.io/<owner>/<repo>:latest
-      #   every push              → ghcr.io/<owner>/<repo>:sha-<short-sha>
+      #   every build             → ghcr.io/<owner>/<repo>:sha-<short-sha>
       - name: Extract Docker metadata
         id: meta
         uses: docker/metadata-action@v5
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
-            type=ref,event=branch
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
             type=semver,pattern={{major}}
