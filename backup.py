@@ -111,11 +111,14 @@ def get_already_backed_up(container_client: ContainerClient, org: str, date_pref
     return backed_up
 
 
-def get_next_run_number(container_client: ContainerClient, date_prefix: str) -> int:
-    """Return the next 1-based run number for today by counting existing manifest files."""
-    prefix = f"{date_prefix}/manifest-"
-    count = sum(1 for _ in container_client.list_blobs(name_starts_with=prefix))
-    return count + 1
+def get_or_create_manifest(container_client: ContainerClient, date_prefix: str, org: str) -> dict:
+    """Download today's manifest if it exists, otherwise return a fresh one."""
+    blob_client = container_client.get_blob_client(f"{date_prefix}/manifest.json")
+    try:
+        data = blob_client.download_blob().readall()
+        return json.loads(data)
+    except Exception:
+        return {"org": org, "date": date_prefix, "runs": []}
 
 
 # ---------------------------------------------------------------------------
@@ -209,8 +212,8 @@ def main() -> None:
 
     container_client = build_container_client(cfg["storage_account"])
 
-    run_number = get_next_run_number(container_client, date_prefix)
-    log.info("Run number for today: %d", run_number)
+    manifest = get_or_create_manifest(container_client, date_prefix, org)
+    run_number = len(manifest["runs"]) + 1
 
     all_repos = list_org_repos(cfg["github_token"], org)
     already_done = get_already_backed_up(container_client, org, date_prefix)
@@ -252,9 +255,8 @@ def main() -> None:
     failures = [r for r in results if r["status"] == "failed"]
 
     # ---- Manifest ------------------------------------------------------------
-    manifest = {
-        "org": org,
-        "date": date_prefix,
+    run_entry = {
+        "run": run_number,
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "duration_seconds": round(duration_s, 1),
         "total_repos_in_org": len(all_repos),
@@ -263,13 +265,14 @@ def main() -> None:
         "failed": len(failures),
         "failed_repos": [r["repo"] for r in failures],
     }
+    manifest["runs"].append(run_entry)
 
     if not cfg["dry_run"]:
-        blob_client = container_client.get_blob_client(f"{date_prefix}/manifest-{run_number}.json")
+        blob_client = container_client.get_blob_client(f"{date_prefix}/manifest.json")
         blob_client.upload_blob(
             json.dumps(manifest, indent=2).encode(), overwrite=True
         )
-        log.info("Manifest uploaded: %s/manifest-%d.json", date_prefix, run_number)
+        log.info("Manifest uploaded: %s/manifest.json (run %d)", date_prefix, run_number)
     else:
         log.info("[DRY RUN] Manifest (run %d):\n%s", run_number, json.dumps(manifest, indent=2))
 
