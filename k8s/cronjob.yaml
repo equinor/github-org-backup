@@ -11,9 +11,9 @@ spec:
   # Never run a second instance while one is already active.
   concurrencyPolicy: Forbid
 
-  # Keep logs for the last 100 successful and 100 failed runs.
-  successfulJobsHistoryLimit: 100
-  failedJobsHistoryLimit: 100
+  # Keep logs for the last 25 successful and 25 failed runs.
+  successfulJobsHistoryLimit: 25
+  failedJobsHistoryLimit: 25
 
   # If the scheduled start is missed, allow up to 10 minutes of grace before
   # skipping that run entirely.
@@ -42,8 +42,14 @@ spec:
           restartPolicy: OnFailure
 
           # Schedule on the user node pool.
+          # Toleration matches the taint on the userpool, keeping system workloads off it.
           nodeSelector:
             agentpool: userpool
+          tolerations:
+            - key: "workload"
+              operator: "Equal"
+              value: "backup"
+              effect: "NoSchedule"
 
           containers:
             - name: backup
