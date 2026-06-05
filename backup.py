@@ -19,6 +19,7 @@ logging.basicConfig(
     datefmt="%Y-%m-%dT%H:%M:%SZ",
     handlers=[logging.StreamHandler(sys.stdout)],
 )
+logging.getLogger("azure").setLevel(logging.WARNING)
 log = logging.getLogger("backup")
 
 
