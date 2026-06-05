@@ -1,0 +1,15 @@
+[project]
+name = "github-org-backup"
+version = "0.1.0"
+requires-python = ">=3.14"
+dependencies = [
+    "PyGithub>=2.1.0",
+    "azure-storage-blob>=12.19.0",
+    "azure-identity>=1.14.0",
+    "azure-keyvault-secrets>=4.7.0",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0.0",
+]

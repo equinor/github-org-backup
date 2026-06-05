@@ -1,0 +1,76 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: github-org-backup
+  namespace: github-backup
+spec:
+  # Weekly on Sunday at 18:00.
+  schedule: "0 18 * * 0"
+  timeZone: "Europe/Oslo"
+
+  # Never run a second instance while one is already active.
+  concurrencyPolicy: Forbid
+
+  # Keep logs for the last 100 successful and 100 failed runs.
+  successfulJobsHistoryLimit: 100
+  failedJobsHistoryLimit: 100
+
+  # If the scheduled start is missed, allow up to 10 minutes of grace before
+  # skipping that run entirely.
+  startingDeadlineSeconds: 600
+
+  jobTemplate:
+    spec:
+      # Retry the pod up to 5 times before marking the job as failed.
+      # Resume logic in backup.py skips repos already uploaded, so retries
+      # are cheap for large orgs.
+      backoffLimit: 5
+
+      # Hard timeout: 24 hours. Sized for 10 000 repos at concurrency=20 with
+      # an average of ~2 min per repo. Increase if your repos are larger.
+      activeDeadlineSeconds: 86400
+
+      template:
+        metadata:
+          labels:
+            # Required by the AKS Workload Identity mutating webhook.
+            azure.workload.identity/use: "true"
+        spec:
+          serviceAccountName: github-backup-sa
+
+          # Never restart the container in place; rely on backoffLimit above.
+          restartPolicy: OnFailure
+
+          containers:
+            - name: backup
+              # Image is published to GitHub Container Registry by the
+              # .github/workflows/docker-publish.yml workflow.
+              # Replace <YOUR_GITHUB_ORG_OR_USER> with the GitHub org/user that
+              # owns the repository (e.g. my-company).
+              image: ghcr.io/<YOUR_GITHUB_ORG_OR_USER>/github-org-backup:latest
+              imagePullPolicy: Always
+
+              # Load all non-sensitive config from the ConfigMap.
+              envFrom:
+                - configMapRef:
+                    name: github-backup-config
+
+              resources:
+                limits:
+                  memory: "4Gi"
+                  cpu: "2000m"
+                requests:
+                  memory: "1Gi"
+                  cpu: "500m"
+
+              volumeMounts:
+                - name: work-dir
+                  mountPath: /tmp/backup-work
+
+          volumes:
+            - name: work-dir
+              emptyDir:
+                # Adjust to: BACKUP_CONCURRENCY × avg_compressed_repo_size.
+                # 100 Gi covers concurrency=20 with repos up to ~5 GB each.
+                # The node's ephemeral-storage limit must be at least this large.
+                sizeLimit: 100Gi

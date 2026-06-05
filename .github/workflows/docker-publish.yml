@@ -1,0 +1,76 @@
+name: Build and publish Docker image
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - "v*"
+  # Allow manual runs from the Actions tab (useful for testing a dry run)
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  # github.repository is "<owner>/<repo>", e.g. "my-org/github-org-backup"
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  build-and-push:
+    name: Build and push
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      # Required to push to GitHub Container Registry
+      packages: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Enables multi-platform builds and advanced caching
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          # GITHUB_TOKEN is automatically available — no manual secret needed
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # Derives image tags and OCI labels from Git metadata:
+      #   push to main            → ghcr.io/<owner>/<repo>:main
+      #   push tag v1.2.3         → ghcr.io/<owner>/<repo>:1.2.3
+      #                             ghcr.io/<owner>/<repo>:1.2
+      #                             ghcr.io/<owner>/<repo>:1
+      #                             ghcr.io/<owner>/<repo>:latest
+      #   every push              → ghcr.io/<owner>/<repo>:sha-<short-sha>
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=semver,pattern={{major}}
+            type=sha,prefix=sha-,format=short
+          labels: |
+            org.opencontainers.image.title=github-org-backup
+            org.opencontainers.image.description=Backs up all repos in a GitHub org to Azure Blob Storage
+
+      - name: Build and push image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          # linux/amd64 for AKS system node pools; add linux/arm64 if needed
+          platforms: linux/amd64
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          # Layer caching via the GitHub Actions cache backend
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

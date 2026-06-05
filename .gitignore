@@ -1,0 +1,17 @@
+# Local dev environment variables (contains secrets)
+.env
+
+# uv / Python virtual environment
+.venv/
+
+# Python bytecode
+__pycache__/
+*.py[cod]
+
+# pytest cache
+.pytest_cache/
+
+# Editor / OS
+.DS_Store
+.idea/
+.vscode/
