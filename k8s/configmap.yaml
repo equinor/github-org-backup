@@ -5,16 +5,16 @@ metadata:
   namespace: github-backup
 data:
   # GitHub organisation to back up
-  GITHUB_ORG: "my-org"
+  GITHUB_ORG: "equinor"
 
   # Azure Key Vault — used by the script to fetch the GitHub PAT at startup
-  AZURE_KEYVAULT_URL: "https://my-vault.vault.azure.net"
-  GITHUB_TOKEN_SECRET_NAME: "github-pat"
+  AZURE_KEYVAULT_URL: "https://github-backup.vault.azure.net/"
+  GITHUB_TOKEN_SECRET_NAME: "github-token"
 
   # Azure Blob Storage — the Managed Identity must have
   # "Storage Blob Data Contributor" on this account (or the container)
-  AZURE_STORAGE_ACCOUNT: "mystorageaccount"
-  AZURE_CONTAINER_NAME: "github-backups"
+  AZURE_STORAGE_ACCOUNT: "equinorghbackup"
+  AZURE_CONTAINER_NAME: "equinor-org"
 
   # Parallel clone/compress/upload workers.
   # Peak disk usage ≈ BACKUP_CONCURRENCY × avg_compressed_repo_size.

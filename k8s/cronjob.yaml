@@ -41,27 +41,21 @@ spec:
           # Never restart the container in place; rely on backoffLimit above.
           restartPolicy: OnFailure
 
+          # Schedule on the user node pool.
+          nodeSelector:
+            agentpool: userpool
+
           containers:
             - name: backup
               # Image is published to GitHub Container Registry by the
               # .github/workflows/docker-publish.yml workflow.
-              # Replace <YOUR_GITHUB_ORG_OR_USER> with the GitHub org/user that
-              # owns the repository (e.g. my-company).
-              image: ghcr.io/<YOUR_GITHUB_ORG_OR_USER>/github-org-backup:latest
+              image: ghcr.io/equinor/github-org-backup:latest
               imagePullPolicy: Always
 
               # Load all non-sensitive config from the ConfigMap.
               envFrom:
                 - configMapRef:
                     name: github-backup-config
-
-              resources:
-                limits:
-                  memory: "4Gi"
-                  cpu: "2000m"
-                requests:
-                  memory: "1Gi"
-                  cpu: "500m"
 
               volumeMounts:
                 - name: work-dir
