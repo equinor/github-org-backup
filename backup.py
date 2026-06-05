@@ -259,6 +259,7 @@ def main() -> None:
         "run": run_number,
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "duration_seconds": round(duration_s, 1),
+        "duration_human": f"{int(duration_s // 3600)}h {int((duration_s % 3600) // 60)}m {int(duration_s % 60)}s",
         "total_repos_in_org": len(all_repos),
         "backed_up_this_run": len(successes),
         "skipped_already_done": len(already_done),
@@ -278,12 +279,14 @@ def main() -> None:
 
     # ---- Summary -------------------------------------------------------------
     log.info(
-        "Done | total=%d backed_up=%d skipped=%d failed=%d duration=%.0fs",
+        "Done | total=%d backed_up=%d skipped=%d failed=%d duration=%dh %dm %ds",
         len(all_repos),
         len(successes),
         len(already_done),
         len(failures),
-        duration_s,
+        int(duration_s // 3600),
+        int((duration_s % 3600) // 60),
+        int(duration_s % 60),
     )
 
     if failures:
