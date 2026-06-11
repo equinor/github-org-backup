@@ -1,0 +1,28 @@
+{
+  "rules": [
+    {
+      "enabled": true,
+      "name": "Access tier and retention",
+      "type": "Lifecycle",
+      "definition": {
+        "actions": {
+          "baseBlob": {
+            "tierToCold": {
+              "daysAfterModificationGreaterThan": 30
+            },
+            "delete": {
+              "daysAfterModificationGreaterThan": 180
+            }
+          }
+        },
+        "filters": {
+          "blobTypes": ["blockBlob"],
+          "prefixMatch": [
+            "equinor-org/",
+            "playground-org/"
+          ]
+        }
+      }
+    }
+  ]
+}
