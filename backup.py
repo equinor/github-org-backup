@@ -162,7 +162,7 @@ def backup_repo(
 
         # ---- Compress --------------------------------------------------------
         result = subprocess.run(
-            ["tar", "-czf", str(tar_path), "-C", str(repo_work_dir), f"{repo_name}.git"],
+            ["tar", "-czf", str(tar_path), "-C", str(repo_work_dir), f"./{repo_name}.git"],
             capture_output=True,
             text=True,
             timeout=600,
